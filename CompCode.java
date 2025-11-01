@@ -116,7 +116,7 @@ public class StarterBotAutoMecanums extends OpMode {
         launcher.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, 
             new PIDFCoefficients(300,0,0,10));
 
-        leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFeeder.setDirection(CrServo.Direction.REVERSE);
         
         telemetry.addData("Status", "Initialized");
     }
