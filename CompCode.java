@@ -1,5 +1,3 @@
-package org.firstinspires.ftc.teamcode;
-
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -17,7 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * [License header same as StarterBotAuto.java]
  */
 
-
+package org.firstinspires.ftc.teamcode;
 
 
 
@@ -30,9 +28,9 @@ public class StarterBotAutoMecanums extends OpMode {
     final double LAUNCHER_TARGET_VELOCITY = 1125;
     final double LAUNCHER_MIN_VELOCITY = 1075;
     final double TIME_BETWEEN_SHOTS = 2;
-    final double DRIVE_SPEED = 0.75;
-    final double ROTATE_SPEED = 0.25;
-    final double WHEEL_DIAMETER_MM = 100;
+    final double DRIVE_SPEED = 0.5;
+    final double ROTATE_SPEED = 0.2;
+    final double WHEEL_DIAMETER_MM = 96;
     final double ENCODER_TICKS_PER_REV = 537.7;
     final double TICKS_PER_MM = (ENCODER_TICKS_PER_REV / (WHEEL_DIAMETER_MM * Math.PI));
     final double TRACK_WIDTH_MM = 404;
@@ -80,8 +78,9 @@ public class StarterBotAutoMecanums extends OpMode {
 
     @Override
     public void init() {
-        autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
-        launchState = LaunchState.LAUNCH;
+        // IMPORTANT This sets the first action performed in autonomous
+        autonomousState = AutonomousState.LAUNCH;
+        launchState = LaunchState.IDLE;
 
         // Initialize hardware with 4 drive motors
         leftFrontDrive = hardwareMap.get(DcMotor.class, "left_front_drive");
@@ -116,7 +115,7 @@ public class StarterBotAutoMecanums extends OpMode {
         launcher.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, 
             new PIDFCoefficients(300,0,0,10));
 
-        leftFeeder.setDirection(CrServo.Direction.REVERSE);
+        leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
         
         telemetry.addData("Status", "Initialized");
     }
@@ -125,7 +124,8 @@ public class StarterBotAutoMecanums extends OpMode {
     public void init_loop() {
         rightFeeder.setPower(0);
         leftFeeder.setPower(0);
-
+        
+        // Alliance code set up and working but not yet implemented into autonomous actions, here we would also select diffrent start positions(Front, Back)
         if (gamepad1.x) {
             alliance = Alliance.BLUE;
         } else if (gamepad1.b) {
@@ -136,50 +136,61 @@ public class StarterBotAutoMecanums extends OpMode {
         telemetry.addData("Press B", "for RED");
         telemetry.addData("Selected Alliance", alliance);
     }
-
+    // Test launch drive and rotate functions here in order to fix them before using in main loop
     @Override
     public void start() {
     }
 
+    // Main loop used to determine what happens during autonomous ask bella if it would be smarter to continue using loop
+    // or to just use start and a bunch of functions isntead of switch cases as all it provides is better telementray data while reducing understandibility.
     @Override
     public void loop() {
         switch (autonomousState) {
+            //Ideally this would launch 3 rings, drive away from the goal, rotate, and drive off the line 
+
+            // This case would happen 3 times
             case LAUNCH:
                 if(launch(true)) {
                     shotTimer.reset();
                     autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
                 }
                 break;
-
+            
+            // This case would happen 3 times
             case WAIT_FOR_LAUNCH:
                 if(shotTimer.seconds() > TIME_BETWEEN_SHOTS) {
-                    shotsToFire-= 1;
+                    shotsToFire--;
                     if(shotsToFire > 0) {
                         autonomousState = AutonomousState.LAUNCH;
                     } else {
-                        autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
+                        autonomousState = AutonomousState.DRIVING_AWAY_FROM_GOAL;
                     }
                 }
                 break;
-
+                
+            // This would happen once after drive function is run it would return true and move to the next case
             case DRIVING_AWAY_FROM_GOAL:
                 if(drive(DRIVE_SPEED, -500, DistanceUnit.MM, 0.5)) {
                     autonomousState = AutonomousState.ROTATING;
                 }
                 break;
 
+            // This would happen once after rotate function is run it would return true and move to the next case
             case ROTATING:
                 if(rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES, 0.5)) {
                     autonomousState = AutonomousState.DRIVING_OFF_LINE;
                 }
                 break;
 
+            // This would happen once after drive function is run it would return true and move to the next case
             case DRIVING_OFF_LINE:
                 if(drive(DRIVE_SPEED, -500, DistanceUnit.MM, 0.5)) {
                     autonomousState = AutonomousState.COMPLETE;
                 }
                 break;
         }
+        
+        // Telementry data to provide feedback on what the robot is doing constantly updated no matter what
 
         telemetry.addData("AutoState", autonomousState);
         telemetry.addData("LauncherState", launchState);
@@ -195,12 +206,16 @@ public class StarterBotAutoMecanums extends OpMode {
     public void stop() {
     }
 
+
+    // Classes for the difffrent functions performed in autonomous mode: launch, drive, rotate(almost none are working as intended) 
+    // them being booleans allows for them to be used in switch cases more easily in the loop making it easier to provide telemetry data and have a clear flow of actions.
+
     boolean launch(boolean shotRequested) {
         switch (launchState) {
             case IDLE:
                 if (shotRequested) {
                     launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
-                    launchState = LaunchState.IDLE;
+                    launchState = LaunchState.PREPARE;
                 }
                 break;
 
@@ -209,7 +224,7 @@ public class StarterBotAutoMecanums extends OpMode {
                     leftFeeder.setPower(1);
                     rightFeeder.setPower(1);
                     feederTimer.reset();
-                    launchState = LaunchState.PREPARE;
+                    launchState = LaunchState.LAUNCH;
                 }
                 break;
 
@@ -217,7 +232,7 @@ public class StarterBotAutoMecanums extends OpMode {
                 if (feederTimer.seconds() > FEED_TIME) {
                     leftFeeder.setPower(0);
                     rightFeeder.setPower(0);
-                    launchState = LaunchState.LAUNCH;
+                    launchState = LaunchState.IDLE;
                     return true;
                 }
                 break;
@@ -250,8 +265,6 @@ public class StarterBotAutoMecanums extends OpMode {
 
         if(Math.abs(targetPosition - leftFrontDrive.getCurrentPosition()) > (TOLERANCE_MM * TICKS_PER_MM)) {
             driveTimer.reset();
-            autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
-            launchState = LaunchState.LAUNCH;
             return false;
         }
 
@@ -261,9 +274,6 @@ public class StarterBotAutoMecanums extends OpMode {
     boolean rotate(double speed, double angle, AngleUnit angleUnit, double holdSeconds) {
         final double TOLERANCE_MM = 10;
         
-        if(alliance == Alliance.RED){
-            angle -= 90;
-        }
         // Convert angle to distance each wheel needs to travel
         double arcLength = (angleUnit.toRadians(angle) * TRACK_WIDTH_MM / 2.0);
         double targetPosition = arcLength * TICKS_PER_MM;
@@ -286,8 +296,6 @@ public class StarterBotAutoMecanums extends OpMode {
 
         if(Math.abs(targetPosition - leftFrontDrive.getCurrentPosition()) > (TOLERANCE_MM * TICKS_PER_MM)) {
             driveTimer.reset();
-            autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
-            launchState = LaunchState.LAUNCH;
             return false;
         }
 
