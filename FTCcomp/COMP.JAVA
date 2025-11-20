@@ -80,7 +80,7 @@ public class StarterBotAutoMecanums extends OpMode {
 
     @Override
     public void init() {
-        autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
+        autonomousState = AutonomousState.DRIVING_AWAY_FROM_GOAL;
         launchState = LaunchState.LAUNCH;
 
         // Initialize hardware with 4 drive motors
@@ -116,7 +116,7 @@ public class StarterBotAutoMecanums extends OpMode {
         launcher.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, 
             new PIDFCoefficients(300,0,0,10));
 
-        leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFeeder.setDirection(CRServoMotorSimple.Direction.REVERSE);
         
         telemetry.addData("Status", "Initialized");
     }
@@ -250,8 +250,6 @@ public class StarterBotAutoMecanums extends OpMode {
 
         if(Math.abs(targetPosition - leftFrontDrive.getCurrentPosition()) > (TOLERANCE_MM * TICKS_PER_MM)) {
             driveTimer.reset();
-            autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
-            launchState = LaunchState.LAUNCH;
             return false;
         }
 
@@ -286,8 +284,6 @@ public class StarterBotAutoMecanums extends OpMode {
 
         if(Math.abs(targetPosition - leftFrontDrive.getCurrentPosition()) > (TOLERANCE_MM * TICKS_PER_MM)) {
             driveTimer.reset();
-            autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
-            launchState = LaunchState.LAUNCH;
             return false;
         }
 
